@@ -21,8 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "build:css": "npx @tailwindcss/cli -i ./public/input.css -o ./public/styles.css --watch",
     "build:css:prod": "npx @tailwindcss/cli -i ./public/input.css -o ./public/styles.css --minify",
-    "prestart": "prisma db push",
-    "prestart:prod": "prisma db push"
+    "prestart": "node scripts/prestart-db-push.js",
+    "prestart:prod": "node scripts/prestart-db-push.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
