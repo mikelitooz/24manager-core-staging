@@ -1,0 +1,207 @@
+// 24manager-core — Standalone SaaS Billing & Admin Dashboard
+// Dedicated control plane for tenant subscriptions and revenue splitting
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ADMIN ACCOUNTS
+// ============================================================================
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // bcrypt hashed
+  name      String
+  role      String   @default("admin") // admin, superadmin
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}
+
+// ============================================================================
+// TENANT (Multi-Tenancy Core)
+// ============================================================================
+
+model Tenant {
+  id              String   @id @default(cuid())
+  name            String                     // Business name (e.g., "Chicken Republic Lekki")
+  slug            String   @unique           // URL-safe identifier
+  industry        String   @default("fast_food")
+  whatsappNumber  String?  @unique           // BSP phone number for this tenant
+  adminPhone      String                     // Owner's personal WhatsApp
+  email           String?
+  logo            String?
+  isActive        Boolean  @default(true)
+
+  // Relations
+  subscription    Subscription?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("tenants")
+}
+
+// ============================================================================
+// SAAS BILLING ENGINE (Subscription management for 24manager clients)
+// ============================================================================
+
+model Plan {
+  id              String       @id @default(cuid())
+  name            String                       // "Basic", "Pro", "Enterprise"
+  description     String?
+  defaultPrice    Decimal      @db.Decimal(10, 2) // Amount in NGN
+  billingCycle    BillingCycle @default(MONTHLY)
+  features        Json         @default("[]")  // ["Feature 1", "Feature 2"]
+  isActive        Boolean      @default(true)
+
+  subscriptions   Subscription[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                        String             @id @default(cuid())
+
+  // Which tenant is subscribed
+  tenantId                  String             @unique
+  tenant                    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Which plan
+  planId                    String
+  plan                      Plan               @relation(fields: [planId], references: [id])
+
+  // Custom price overrides plan default (negotiated pricing)
+  customPrice               Decimal?           @db.Decimal(10, 2)
+  billingCycle              BillingCycle       @default(MONTHLY)
+  status                    SubscriptionStatus @default(PENDING)
+
+  // Billing dates
+  nextBillingDate           DateTime?
+  lastBilledAt              DateTime?
+
+  // Paystack authorization for recurring charges
+  paystackAuthorizationCode String?
+  paystackCustomerCode      String?
+  paystackEmail             String?            // Email used for Paystack charges
+
+  // Revenue share configuration
+  revenueSharePercentage    Decimal            @default(30) @db.Decimal(5, 2)
+  technicalPartnerId        String?            // Your ID as technical partner
+
+  // Tracking
+  transactions              SubscriptionTransaction[]
+  revenueShareLogs          RevenueShareLog[]
+
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  isProcessingBilling       Boolean            @default(false)
+
+  @@index([status])
+  @@index([nextBillingDate])
+  @@map("subscriptions")
+}
+
+model SubscriptionTransaction {
+  id              String             @id @default(cuid())
+
+  subscriptionId  String
+  subscription    Subscription       @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  amount          Decimal            @db.Decimal(10, 2)
+  status          PaymentStatus      @default(PENDING)
+  paystackRef     String?            @unique  // Idempotency key — prevents double-processing
+  failureReason   String?
+  retryCount      Int                @default(0)
+
+  // Paystack response
+  providerResponse Json?
+
+  createdAt       DateTime           @default(now())
+
+  @@index([subscriptionId])
+  @@index([paystackRef])
+  @@map("subscription_transactions")
+}
+
+model RevenueShareLog {
+  id                String       @id @default(cuid())
+
+  subscriptionId    String
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  amountCharged     Decimal      @db.Decimal(10, 2)  // Total amount charged to client
+  partnerPercentage Decimal      @db.Decimal(5, 2)   // e.g., 30.00
+  partnerAmount     Decimal      @db.Decimal(10, 2)  // Your 30% cut
+  platformAmount    Decimal      @db.Decimal(10, 2)  // Anderson's 70% cut
+  billingDate       DateTime
+
+  createdAt         DateTime     @default(now())
+
+  @@index([subscriptionId])
+  @@index([billingDate])
+  @@index([createdAt])
+  @@map("revenue_share_logs")
+}
+
+// ============================================================================
+// AUDIT LOG (Tracks all admin changes — protects revenue share transparency)
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // e.g., "PLAN_PRICE_UPDATED", "SUBSCRIPTION_CANCELLED", "CUSTOM_PRICE_SET"
+  entityType  String   // "Plan", "Subscription", "Tenant"
+  entityId    String
+  tenantId    String?  // If action is specific to a tenant
+  changedBy   String   // Admin user identifier
+  oldValue    Json?
+  newValue    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([tenantId])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum PaymentStatus {
+  PENDING     // Awaiting payment
+  PAID        // Payment successful
+  FAILED      // Payment failed
+  EXPIRED     // Payment link expired
+  REFUNDED    // Payment refunded
+}
+
+enum BillingCycle {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  PENDING     // Awaiting first payment
+  ACTIVE      // Subscription is active and billing
+  PAUSED      // Manually paused by admin
+  PAST_DUE    // Payment failed, currently in retry schedule
+  SUSPENDED   // Suspended due to failed payments
+  CANCELLED   // Cancelled
+}

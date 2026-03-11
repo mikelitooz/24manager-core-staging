@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@source "./{*.html,*.js}";
+
+@theme {
+  --color-primary: #0d7ff2;
+  --color-background-light: #f5f7f8;
+  --color-background-dark: #101922;
+  --font-display: "Inter", sans-serif;
+}
+
+/* Custom overrides from the original index.html */
+@layer base {
+  body {
+    font-family: var(--font-display);
+    background-color: var(--color-background-light);
+  }
+}
+
+@layer utilities {
+  .tab-active {
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+  }
+}
+
+.loader {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--color-primary);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
