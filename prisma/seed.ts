@@ -3,7 +3,7 @@ import { PrismaClient, BillingCycle } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding default plans...');
+    console.log('Seeding default plans...');
 
     const plans = [
         {
@@ -50,15 +50,22 @@ async function main() {
     ];
 
     for (const planData of plans) {
-        const plan = await prisma.plan.upsert({
+        const existingPlan = await prisma.plan.findFirst({
             where: { name: planData.name },
-            update: planData,
-            create: planData,
         });
-        console.log(`✅ Created/Updated Plan: ${plan.name}`);
+
+        const plan = existingPlan
+            ? await prisma.plan.update({
+                where: { id: existingPlan.id },
+                data: planData,
+            })
+            : await prisma.plan.create({
+                data: planData,
+            });
+        console.log(`Created/Updated Plan: ${plan.name}`);
     }
 
-    console.log('✨ Seed complete!');
+    console.log('Seed complete!');
 }
 
 main()

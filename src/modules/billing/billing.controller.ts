@@ -14,7 +14,7 @@ import {
     UseGuards,
     UnauthorizedException,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { BillingService } from './billing.service';
 import { PaystackService } from './paystack.service';
