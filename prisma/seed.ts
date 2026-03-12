@@ -2,7 +2,21 @@ import 'dotenv/config';
 import { PrismaClient, BillingCycle } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const connectionString = process.env.DATABASE_URL;
+function normalizeDatabaseUrl(rawValue: string | undefined): string | undefined {
+    if (!rawValue) {
+        return rawValue;
+    }
+    let value = rawValue.trim();
+    if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("\'") && value.endsWith("\'"))
+    ) {
+        value = value.slice(1, -1).trim();
+    }
+    return value.replace(/[\r\n]+/g, '');
+}
+
+const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
 if (!connectionString) {
     throw new Error('DATABASE_URL is not set');
 }
