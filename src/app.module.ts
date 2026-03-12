@@ -14,7 +14,7 @@ import { BillingModule } from './modules/billing/billing.module';
       limit: 100,
     }]),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(process.cwd(), 'public'),
       serveRoot: '/admin', // Dashboard served at /admin
     }),
   ],
