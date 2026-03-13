@@ -71,7 +71,7 @@ export class BillingService implements OnModuleInit {
             {
                 name: 'Enterprise Plan',
                 description: 'For franchises or large operations needing full automation. Custom pricing available.',
-                defaultPrice: 150000,
+                defaultPrice: 0, // 0 indicates "Custom" pricing on the frontend
                 billingCycle: BillingCycle.MONTHLY,
                 features: [
                     '7 WhatsApp AI Accounts',
@@ -86,33 +86,42 @@ export class BillingService implements OnModuleInit {
             }
         ];
 
-        // Robust cleanup: Delete old or duplicated plans to ensure exactly 3 correct ones exist.
-        // We delete by name and also remove the old 'Enterprise' (50k) specifically.
-        const unwantedNames = ['Starter', 'Pro', 'Enterprise', 'Basic Plan', 'Professional Plan', 'Enterprise Plan'];
-        
-        // This is safe to run repeatedly; it ensures 0 duplicates of the new plans.
-        // We wipe current ones and recreate them to be 100% sure the ID and data are fresh.
-        // NOTE: If you have active subscriptions, Prisma will protect this via foreign keys.
-        try {
-            await this.prisma.plan.deleteMany({
-                where: {
-                    name: { in: unwantedNames }
-                }
-            });
-        } catch (e) {
-            this.logger.warn('Could not wipe all old plans (likely due to active subscriptions). Proceeding with updates.');
-        }
+        // 1. Deactivate ALL old or mismatched plans to prevent duplicates.
+        // This is safer than deleteMany because it won't fail if a plan has a subscription.
+        const activePlanNames = defaultPlans.map(p => p.name);
+        await this.prisma.plan.updateMany({
+            where: {
+                name: { notIn: activePlanNames }
+            },
+            data: { isActive: false }
+        });
 
+        // 2. Clear out any specific duplicates if they accidentally have the same name
+        // (This happens if multiple records with 'Enterprise Plan' exist)
         for (const planData of defaultPlans) {
-            const existing = await this.prisma.plan.findFirst({ where: { name: planData.name } });
-            if (!existing) {
+            const plans = await this.prisma.plan.findMany({ 
+                where: { name: planData.name },
+                orderBy: { createdAt: 'asc' }
+            });
+
+            if (plans.length === 0) {
                 await this.prisma.plan.create({ data: planData });
                 this.logger.log(`Default Plan seeded: ${planData.name}`);
             } else {
+                // Keep the first one, update it, and deactivate/delete the rest
+                const [primary, ...duplicates] = plans;
                 await this.prisma.plan.update({
-                    where: { id: existing.id },
-                    data: planData
+                    where: { id: primary.id },
+                    data: { ...planData, isActive: true } // Ensure the primary one is ACTIVE
                 });
+
+                for (const dup of duplicates) {
+                    try {
+                        await this.prisma.plan.delete({ where: { id: dup.id } });
+                    } catch (e) {
+                        await this.prisma.plan.update({ where: { id: dup.id }, data: { isActive: false } });
+                    }
+                }
             }
         }
     }

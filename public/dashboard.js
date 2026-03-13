@@ -179,7 +179,10 @@ function showAlert(msg, type = 'success') {
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-const formatMoney = (amount) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
+const formatMoney = (amount) => {
+    if (Number(amount) === 0) return 'Custom';
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
+};
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
 
 // ==========================================
@@ -226,7 +229,10 @@ async function initDashboard() {
     try {
         availablePlans = await apiCall('/plans');
         const select = document.getElementById('s-plan');
-        select.innerHTML = availablePlans.map(p => `<option value="${p.id}">${p.name} (${formatMoney(p.defaultPrice)}/${p.billingCycle})</option>`).join('');
+        select.innerHTML = availablePlans.map(p => {
+            const priceLabel = Number(p.defaultPrice) === 0 ? 'Custom' : `${formatMoney(p.defaultPrice)}/${p.billingCycle}`;
+            return `<option value="${p.id}">${p.name} (${priceLabel})</option>`;
+        }).join('');
 
         switchTab('overview');
     } catch (err) {
@@ -330,7 +336,10 @@ async function loadPlans() {
                     <h4 class="text-lg font-bold text-slate-800">${p.name}</h4>
                     <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-medium">${p._count?.subscriptions || 0} Subs</span>
                 </div>
-                <div class="text-3xl font-bold text-slate-800 mb-2">${formatMoney(p.defaultPrice)}<span class="text-sm font-normal text-slate-500">/${p.billingCycle.toLowerCase()}</span></div>
+                <div class="text-3xl font-bold text-slate-800 mb-2">
+                    ${formatMoney(p.defaultPrice)}
+                    ${Number(p.defaultPrice) > 0 ? `<span class="text-sm font-normal text-slate-500">/${p.billingCycle.toLowerCase()}</span>` : ''}
+                </div>
                 <p class="text-sm text-slate-500 mb-6 flex-1">${p.description || ''}</p>
                 
                 <div class="space-y-2 mb-6">
