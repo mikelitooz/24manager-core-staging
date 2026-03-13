@@ -179,8 +179,8 @@ function showAlert(msg, type = 'success') {
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-const formatMoney = (amount) => {
-    if (Number(amount) === 0) return 'Custom';
+const formatMoney = (amount, isPlanLabel = false) => {
+    if (isPlanLabel && Number(amount) === 0) return 'Custom';
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
 };
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
@@ -230,9 +230,20 @@ async function initDashboard() {
         availablePlans = await apiCall('/plans');
         const select = document.getElementById('s-plan');
         select.innerHTML = availablePlans.map(p => {
-            const priceLabel = Number(p.defaultPrice) === 0 ? 'Custom' : `${formatMoney(p.defaultPrice)}/${p.billingCycle}`;
+            const priceLabel = Number(p.defaultPrice) === 0 ? 'Custom' : `${formatMoney(p.defaultPrice, true)}/${p.billingCycle}`;
             return `<option value="${p.id}">${p.name} (${priceLabel})</option>`;
         }).join('');
+
+        select.addEventListener('change', (e) => {
+            const planId = e.target.value;
+            const plan = availablePlans.find(p => p.id === planId);
+            const container = document.getElementById('custom-price-container');
+            if (plan && Number(plan.defaultPrice) === 0) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        });
 
         switchTab('overview');
     } catch (err) {
@@ -247,10 +258,10 @@ async function loadOverview() {
             apiCall('/revenue/logs')
         ]);
 
-        document.getElementById('stat-mrr').textContent = formatMoney(summary.mrr);
+        document.getElementById('stat-mrr').textContent = formatMoney(summary.mrr, false);
         document.getElementById('stat-subs').textContent = summary.activeSubscriptions;
-        document.getElementById('stat-platform-rev').textContent = formatMoney(summary.platformRevenue);
-        document.getElementById('stat-partner-rev').textContent = formatMoney(summary.partnerRevenue);
+        document.getElementById('stat-platform-rev').textContent = formatMoney(summary.platformRevenue, false);
+        document.getElementById('stat-partner-rev').textContent = formatMoney(summary.partnerRevenue, false);
 
         const table = document.getElementById('revenue-logs-table');
 
@@ -262,9 +273,9 @@ async function loadOverview() {
                 <tr class="hover:bg-slate-50">
                     <td class="px-6 py-4 whitespace-nowrap text-slate-500">${formatDate(log.createdAt)}</td>
                     <td class="px-6 py-4 font-medium text-slate-800">${log.subscription.tenant.name}</td>
-                    <td class="px-6 py-4 text-slate-700">${formatMoney(log.amountCharged)}</td>
-                    <td class="px-6 py-4 font-medium text-emerald-600">${formatMoney(log.platformAmount)}</td>
-                    <td class="px-6 py-4 font-medium text-blue-600">${formatMoney(log.partnerAmount)}</td>
+                    <td class="px-6 py-4 text-slate-700">${formatMoney(log.amountCharged, false)}</td>
+                    <td class="px-6 py-4 font-medium text-emerald-600">${formatMoney(log.platformAmount, false)}</td>
+                    <td class="px-6 py-4 font-medium text-blue-600">${formatMoney(log.partnerAmount, false)}</td>
                 </tr>
             `).join('');
         }
@@ -337,7 +348,7 @@ async function loadPlans() {
                     <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-medium">${p._count?.subscriptions || 0} Subs</span>
                 </div>
                 <div class="text-3xl font-bold text-slate-800 mb-2">
-                    ${formatMoney(p.defaultPrice)}
+                    ${formatMoney(p.defaultPrice, true)}
                     ${Number(p.defaultPrice) > 0 ? `<span class="text-sm font-normal text-slate-500">/${p.billingCycle.toLowerCase()}</span>` : ''}
                 </div>
                 <p class="text-sm text-slate-500 mb-6 flex-1">${p.description || ''}</p>
