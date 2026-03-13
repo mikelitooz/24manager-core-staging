@@ -29,43 +29,50 @@ async function main() {
 
     const plans = [
         {
-            name: 'Starter',
-            description: 'Perfect for single-location businesses.',
-            defaultPrice: 5000,
+            name: 'Basic Plan',
+            description: 'Perfect for startups or solo entrepreneurs automating customer engagement and order management.',
+            defaultPrice: 40000,
             billingCycle: BillingCycle.MONTHLY,
             features: [
-                '1 Location (Restaurant)',
-                'WhatsApp Order Integration',
-                'Basic Dashboard Analytics',
-                'Email Support'
+                '1 WhatsApp AI Bot (predefined template)',
+                '1 User Access',
+                'Manage orders, bookings, and FAQs',
+                'AI ↔ Human mode switching',
+                'Bulk messaging (approved templates)',
+                'Delivery integration (Glovo, etc.)',
+                'Social media account management'
             ],
             isActive: true
         },
         {
-            name: 'Pro',
-            description: 'Best for growing businesses with multiple staff.',
-            defaultPrice: 15000,
+            name: 'Professional Plan',
+            description: 'For growing businesses managing multiple brands or departments.',
+            defaultPrice: 75000,
             billingCycle: BillingCycle.MONTHLY,
             features: [
-                'Up to 3 Locations',
-                'Priority WhatsApp Bot',
-                'Advanced Revenue Analytics',
-                'Staff Accounts & Roles',
-                'Sales History Export'
+                '3 WhatsApp AI Accounts',
+                'Unlimited Users',
+                'Front Office AI, Back Office AI, and Management AI',
+                'Everything in Basic + advanced workflow integrations',
+                'Priority support',
+                'Custom templates',
+                'Advanced analytics'
             ],
             isActive: true
         },
         {
-            name: 'Enterprise',
-            description: 'Custom solutions for large franchises.',
-            defaultPrice: 50000,
+            name: 'Enterprise Plan',
+            description: 'For franchises or large operations needing full automation. Custom pricing available.',
+            defaultPrice: 150000,
             billingCycle: BillingCycle.MONTHLY,
             features: [
-                'Unlimited Locations',
-                'White-label Bot Branding',
-                'Custom API Integrations',
-                'Dedicated Support Hero',
-                'Performance Optimization Tools'
+                '7 WhatsApp AI Accounts',
+                'Unlimited Users',
+                'Centralized analytics & multi-branch integration',
+                'Advanced automation workflows',
+                'Priority support',
+                'Dedicated account manager',
+                'Custom integrations'
             ],
             isActive: true
         }
