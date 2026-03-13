@@ -33,6 +33,44 @@ export class BillingService implements OnModuleInit {
             });
             this.logger.log(`Default admin created: ${defaultEmail}`);
         }
+
+        // Ensure default plans exist so the frontend Select Plan UI populates correctly
+        const defaultPlans = [
+            {
+                name: 'Starter',
+                description: 'Perfect for single-location businesses.',
+                defaultPrice: 5000,
+                billingCycle: BillingCycle.MONTHLY,
+                features: ['1 Location (Restaurant)', 'WhatsApp Order Integration', 'Basic Dashboard Analytics', 'Email Support'],
+                isActive: true
+            },
+            {
+                name: 'Pro',
+                description: 'Best for growing businesses with multiple staff.',
+                defaultPrice: 15000,
+                billingCycle: BillingCycle.MONTHLY,
+                features: ['Up to 3 Locations', 'Priority WhatsApp Bot', 'Advanced Revenue Analytics', 'Staff Accounts & Roles', 'Sales History Export'],
+                isActive: true
+            },
+            {
+                name: 'Enterprise',
+                description: 'Custom solutions for large franchises.',
+                defaultPrice: 50000,
+                billingCycle: BillingCycle.MONTHLY,
+                features: ['Unlimited Locations', 'White-label Bot Branding', 'Custom API Integrations', 'Dedicated Support Hero', 'Performance Optimization Tools'],
+                isActive: true
+            }
+        ];
+
+        for (const planData of defaultPlans) {
+            const existingPlan = await this.prisma.plan.findFirst({
+                where: { name: planData.name },
+            });
+            if (!existingPlan) {
+                await this.prisma.plan.create({ data: planData });
+                this.logger.log(`Default Plan seeded: ${planData.name}`);
+            }
+        }
     }
 
     async validateAdminUser(email: string, passwordAttempt: string) {
