@@ -234,8 +234,8 @@ async function initDashboard() {
             return `<option value="${p.id}">${p.name} (${priceLabel})</option>`;
         }).join('');
 
-        select.addEventListener('change', (e) => {
-            const planId = e.target.value;
+        const updateCustomPriceVisibility = () => {
+            const planId = select.value;
             const plan = availablePlans.find(p => p.id === planId);
             const container = document.getElementById('custom-price-container');
             if (plan && Number(plan.defaultPrice) === 0) {
@@ -243,7 +243,12 @@ async function initDashboard() {
             } else {
                 container.classList.add('hidden');
             }
-        });
+        };
+
+        select.addEventListener('change', updateCustomPriceVisibility);
+        
+        // Initial check in case a plan is pre-selected
+        updateCustomPriceVisibility();
 
         switchTab('overview');
     } catch (err) {
